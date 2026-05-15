@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.exam.mapper.ExamQuestionMapper">
+    <insert id="addExamQuestion">
+        INSERT INTO exam_question (exam_id, question_id) VALUES (#{examId}, #{questionId})
+    </insert>
+    <select id="getQuestionIdsByExamId" resultType="java.lang.Integer">
+        SELECT question_id FROM exam_question WHERE exam_id = #{examId}
+    </select>
+    <delete id="deleteExamQuestion">
+        DELETE FROM exam_question WHERE exam_id = #{examId}
+    </delete>
+</mapper>

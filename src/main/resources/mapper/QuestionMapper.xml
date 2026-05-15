@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.exam.mapper.QuestionMapper">
+    <insert id="addQuestion">
+        INSERT INTO question (content, option_a, option_b, option_c, option_d, answer) VALUES (#{content}, #{optionA}, #{optionB}, #{optionC}, #{optionD}, #{answer})
+    </insert>
+    <select id="getAllQuestions" resultType="com.example.exam.entity.Question">
+        SELECT * FROM question
+    </select>
+    <select id="getQuestionById" resultType="com.example.exam.entity.Question">
+        SELECT * FROM question WHERE question_id = #{questionId}
+    </select>
+    <update id="updateQuestion">
+        UPDATE question SET content = #{content}, option_a = #{optionA}, option_b = #{optionB}, option_c = #{optionC}, option_d = #{optionD}, answer = #{answer} WHERE question_id = #{questionId}
+    </update>
+    <delete id="deleteQuestion">
+        DELETE FROM question WHERE question_id = #{questionId}
+    </delete>
+</mapper>

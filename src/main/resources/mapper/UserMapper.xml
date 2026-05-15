@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.exam.mapper.UserMapper">
+    <select id="login" resultType="com.example.exam.entity.User">
+        SELECT * FROM users WHERE username = #{username} AND password = #{password}
+    </select>
+    <select id="getAllUsers" resultType="com.example.exam.entity.User">
+        SELECT * FROM users
+    </select>
+    <insert id="addUser">
+        INSERT INTO users (username, password, role) VALUES (#{username}, #{password}, #{role})
+    </insert>
+    <delete id="deleteUser">
+        DELETE FROM users WHERE user_id = #{userId}
+    </delete>
+    <select id="getUserById" resultType="com.example.exam.entity.User">
+        SELECT * FROM users WHERE user_id = #{userId}
+    </select>
+    <update id="updateUser">
+        UPDATE users SET username = #{username}, password = #{password}, role = #{role} WHERE user_id = #{userId}
+    </update>
+</mapper>

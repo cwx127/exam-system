@@ -1,0 +1,189 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在线考试系统 - 考生</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', sans-serif; background: #f5f7fa; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 20px; }
+        .header button { padding: 8px 16px; background: rgba(255,255,255,0.2); border: 1px solid white; color: white; border-radius: 5px; cursor: pointer; }
+        .tabs { display: flex; background: white; border-bottom: 1px solid #eee; }
+        .tab { padding: 15px 25px; cursor: pointer; font-size: 16px; color: #666; border-bottom: 2px solid transparent; }
+        .tab.active { color: #667eea; border-bottom-color: #667eea; }
+        .content { padding: 20px; }
+        .exam-card { background: white; border-radius: 10px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .exam-info h3 { color: #333; margin-bottom: 5px; }
+        .exam-info p { color: #666; font-size: 14px; }
+        .btn-start { background: #667eea; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+        .question-container { background: white; border-radius: 10px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .question-number { background: #667eea; color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; justify-content: center; align-items: center; margin-bottom: 15px; font-weight: bold; }
+        .question-content { font-size: 16px; margin-bottom: 20px; color: #333; }
+        .options { display: flex; flex-direction: column; gap: 10px; }
+        .option { padding: 12px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.3s; }
+        .option:hover { border-color: #667eea; }
+        .option.selected { border-color: #667eea; background: #f0f4ff; }
+        .exam-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .exam-title { font-size: 20px; font-weight: bold; color: #333; }
+        .timer { background: #f8f9fa; padding: 10px 20px; border-radius: 5px; font-size: 18px; font-weight: bold; color: #667eea; }
+        .submit-btn { background: #4CAF50; color: white; padding: 15px 30px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin-top: 20px; }
+        .result-container { text-align: center; background: white; border-radius: 10px; padding: 40px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .result-score { font-size: 72px; font-weight: bold; color: #667eea; margin-bottom: 20px; }
+        .result-message { font-size: 18px; color: #666; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; color: #666; }
+        .back-btn { background: #667eea; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>在线考试系统 - 考生</h1>
+        <button onclick="logout()">退出登录</button>
+    </div>
+    <div class="tabs">
+        <div class="tab active" onclick="showTab('exams')">参加考试</div>
+        <div class="tab" onclick="showTab('scores')">查看成绩</div>
+    </div>
+    <div class="content">
+        <div id="exams" class="tab-content"><div id="exam-list"></div></div>
+        <div id="exam-panel" class="tab-content" style="display: none;">
+            <button class="back-btn" onclick="backToExamList()">返回</button>
+            <div class="exam-header"><div class="exam-title" id="exam-title"></div><div class="timer" id="timer">00:00</div></div>
+            <div id="question-list"></div>
+            <button class="submit-btn" onclick="submitExam()">提交试卷</button>
+        </div>
+        <div id="exam-result" class="tab-content" style="display: none;">
+            <button class="back-btn" onclick="showTab('exams')">返回</button>
+            <div class="result-container"><div class="result-score" id="result-score">0</div><div class="result-message" id="result-message"></div></div>
+        </div>
+        <div id="scores" class="tab-content" style="display: none;">
+            <table><tr><th>试卷ID</th><th>分数</th></tr><tbody id="score-table-body"></tbody></table>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = JSON.parse(localStorage.getItem('user'));
+        let currentExamId = null;
+        let answers = {};
+        let timerInterval = null;
+        let remainingTime = 0;
+        
+        if (!currentUser || currentUser.role !== 'STUDENT') window.location.href = 'index.html';
+        
+        function logout() { localStorage.removeItem('user'); window.location.href = 'index.html'; }
+        
+        function showTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
+            event.target.classList.add('active');
+            document.getElementById(tabName).style.display = 'block';
+            if (tabName === 'exams') loadExams();
+            if (tabName === 'scores') loadScores();
+        }
+        
+        function loadExams() {
+            fetch('/api/exam/list').then(r => r.json()).then(data => {
+                let html = '';
+                if (data.length === 0) {
+                    html = '<p style="text-align:center; color:#666;">暂无可用试卷</p>';
+                } else {
+                    data.forEach(exam => {
+                        html += `<div class="exam-card"><div class="exam-info"><h3>${exam.examName}</h3><p>考试时长：${exam.duration}分钟</p></div><button class="btn-start" onclick="startExam(${exam.examId}, '${exam.examName}', ${exam.duration})">开始考试</button></div>`;
+                    });
+                }
+                document.getElementById('exam-list').innerHTML = html;
+            });
+        }
+        
+        function startExam(examId, examName, duration) {
+            currentExamId = examId;
+            answers = {};
+            remainingTime = duration * 60;
+            
+            document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
+            document.getElementById('exam-panel').style.display = 'block';
+            document.getElementById('exam-title').textContent = examName;
+            
+            startTimer();
+            
+            fetch(`/api/exam/${examId}/questions`).then(r => r.json()).then(data => {
+                let html = '';
+                data.forEach((question, index) => {
+                    html += `<div class="question-container"><div class="question-number">${index + 1}</div><div class="question-content">${question.content}</div><div class="options">`;
+                    html += `<div class="option" onclick="selectAnswer(${question.questionId}, 'A')"><input type="radio" name="q${question.questionId}" value="A"> A. ${question.optionA}</div>`;
+                    html += `<div class="option" onclick="selectAnswer(${question.questionId}, 'B')"><input type="radio" name="q${question.questionId}" value="B"> B. ${question.optionB}</div>`;
+                    html += `<div class="option" onclick="selectAnswer(${question.questionId}, 'C')"><input type="radio" name="q${question.questionId}" value="C"> C. ${question.optionC}</div>`;
+                    html += `<div class="option" onclick="selectAnswer(${question.questionId}, 'D')"><input type="radio" name="q${question.questionId}" value="D"> D. ${question.optionD}</div>`;
+                    html += `</div></div>`;
+                });
+                document.getElementById('question-list').innerHTML = html;
+            });
+        }
+        
+        function startTimer() {
+            updateTimer();
+            timerInterval = setInterval(() => {
+                remainingTime--;
+                updateTimer();
+                if (remainingTime <= 0) { clearInterval(timerInterval); submitExam(); }
+            }, 1000);
+        }
+        
+        function updateTimer() {
+            const minutes = Math.floor(remainingTime / 60);
+            const seconds = remainingTime % 60;
+            document.getElementById('timer').textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        function selectAnswer(questionId, answer) {
+            answers[questionId] = answer;
+            document.querySelectorAll(`.option`).forEach(opt => opt.classList.remove('selected'));
+            document.querySelectorAll(`input[name="q${questionId}"]`).forEach(input => {
+                if (input.value === answer) { input.checked = true; input.parentElement.classList.add('selected'); }
+            });
+        }
+        
+        function submitExam() {
+            if (timerInterval) clearInterval(timerInterval);
+            if (Object.keys(answers).length === 0) {
+                if (!confirm('您还没有作答任何题目，确定要提交吗？')) { startTimer(); return; }
+            }
+            fetch('/api/score/submit', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: currentUser.userId, examId: currentExamId, answers: answers })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
+                    document.getElementById('exam-result').style.display = 'block';
+                    document.getElementById('result-score').textContent = data.score;
+                    document.getElementById('result-message').textContent = data.score >= 60 ? '恭喜您通过考试！' : '很遗憾，未通过考试。';
+                } else {
+                    alert('提交失败：' + data.message);
+                }
+            });
+        }
+        
+        function backToExamList() { if (timerInterval) clearInterval(timerInterval); showTab('exams'); }
+        
+        function loadScores() {
+            fetch(`/api/score/user/${currentUser.userId}`).then(r => r.json()).then(data => {
+                let html = '';
+                if (data.length === 0) {
+                    html = '<tr><td colspan="2" style="text-align:center; color:#666;">暂无成绩记录</td></tr>';
+                } else {
+                    data.forEach(score => {
+                        html += `<tr><td>${score.examId}</td><td>${score.score}</td></tr>`;
+                    });
+                }
+                document.getElementById('score-table-body').innerHTML = html;
+            });
+        }
+        
+        loadExams();
+    </script>
+</body>
+</html>
